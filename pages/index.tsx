@@ -1,0 +1,139 @@
+import React, { useState, useCallback } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import SearchBar from '../components/SearchBar';
+import Dashboard from '../components/Dashboard';
+import LeafletMapSelector from '../components/LeafletMapSelector';
+import { searchPMF } from '../lib/api';
+import { SearchResult } from '../types/SearchResult';
+
+interface SearchState {
+  results: SearchResult[];
+  isLoading: boolean;
+  error: string | null;
+  hasSearched: boolean;
+}
+
+const initialState: SearchState = {
+  results: [],
+  isLoading: false,
+  error: null,
+  hasSearched: false,
+};
+
+export default function Home() {
+  const [state, setState] = useState<SearchState>(initialState);
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    lat: number;
+    lng: number;
+    radius: number;
+  } | null>(null);
+
+  const handleSearch = useCallback(async (query: string) => {
+    setState(prev => ({
+      ...prev,
+      isLoading: true,
+      error: null,
+      hasSearched: true,
+    }));
+
+    try {
+      const results = await searchPMF(query);
+      setState(prev => ({
+        ...prev,
+        results,
+        isLoading: false,
+      }));
+    } catch (err) {
+      setState(prev => ({
+        ...prev,
+        error: err instanceof Error ? err.message : 'Search failed',
+        results: [],
+        isLoading: false,
+      }));
+    }
+  }, []);
+
+  const handleLocationSelect = useCallback((location: { lat: number; lng: number; radius: number }) => {
+    setSelectedLocation(location);
+    console.log('Selected location:', location);
+  }, []);
+
+  const openMap = useCallback(() => {
+    setIsMapOpen(true);
+  }, []);
+
+  const closeMap = useCallback(() => {
+    setIsMapOpen(false);
+  }, []);
+
+  return (
+    <>
+      <Head>
+        <title>Project Echo Ridge Search</title>
+        <meta name="description" content="PMF Search Engine - Production Ready" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+
+      <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 py-12">
+          <nav className="flex justify-end mb-8">
+            <Link 
+              href="/about"
+              className="text-gray-600 hover:text-black font-medium"
+            >
+              About
+            </Link>
+          </nav>
+
+          <header className="text-center mb-16">
+            <h1 className="text-3xl font-bold text-black tracking-tight">
+              Project Echo Ridge Search
+            </h1>
+          </header>
+
+          <div className="max-w-5xl mx-auto">
+            <SearchBar 
+              onSearch={handleSearch} 
+              isLoading={state.isLoading} 
+            />
+            
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8">
+              <button
+                onClick={openMap}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 font-medium"
+              >
+                🗺️ Select Location
+              </button>
+              {selectedLocation && (
+                <div className="text-sm text-gray-600 flex items-center text-center sm:text-left">
+                  📍 {selectedLocation.lat.toFixed(4)}, {selectedLocation.lng.toFixed(4)} 
+                  <br className="sm:hidden" />
+                  <span className="sm:ml-1">
+                    ({selectedLocation.radius >= 1000 
+                      ? `${(selectedLocation.radius / 1000).toFixed(1)}km` 
+                      : `${selectedLocation.radius}m`} radius)
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <Dashboard 
+              results={state.results}
+              isLoading={state.isLoading}
+              error={state.error}
+              hasSearched={state.hasSearched}
+            />
+          </div>
+        </div>
+
+        <LeafletMapSelector
+          isOpen={isMapOpen}
+          onSelect={handleLocationSelect}
+          onClose={closeMap}
+        />
+      </main>
+    </>
+  );
+}
