@@ -5,6 +5,7 @@ import SearchBar from '../components/SearchBar';
 import Dashboard from '../components/Dashboard';
 import LeafletMapSelector from '../components/LeafletMapSelector';
 import { searchPMF } from '../lib/api';
+import { saveQuery } from '../lib/db';
 import { SearchResult } from '../types/SearchResult';
 
 interface SearchState {
@@ -45,6 +46,22 @@ export default function Home() {
         results,
         isLoading: false,
       }));
+
+      // Save query and response to database
+      try {
+        const avgScore = results.length > 0 
+          ? results.reduce((sum, r) => sum + r.score, 0) / results.length 
+          : 0;
+        
+        await saveQuery(query, results, { 
+          model: 'mock-v0', 
+          score: Number(avgScore.toFixed(3)),
+          resultsCount: results.length
+        });
+      } catch (dbError) {
+        console.error('Failed to save query to database:', dbError);
+        // Don't fail the search if database save fails
+      }
     } catch (err) {
       setState(prev => ({
         ...prev,
