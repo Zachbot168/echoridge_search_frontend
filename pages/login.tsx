@@ -30,8 +30,8 @@ export default function LoginPage() {
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
 
-        // Redirect to dashboard
-        router.push('/database');
+        // Redirect to search page
+        router.push('/');
       } else {
         setError(data.error || 'Login failed');
       }
@@ -107,7 +107,7 @@ export default function LoginPage() {
           </div>
 
           <div className="text-sm text-center text-gray-600">
-            Default credentials: admin@echoridge.com / admin123
+            Default credentials: admin@test.com / admin123
           </div>
         </form>
       </div>

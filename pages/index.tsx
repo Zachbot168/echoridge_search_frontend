@@ -1,9 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import SearchBar from '../components/SearchBar';
 import Dashboard from '../components/Dashboard';
 import LeafletMapSelector from '../components/LeafletMapSelector';
+import AuthGuard from '../components/AuthGuard';
 import { searchPMF } from '../lib/api';
 import { saveQuery } from '../lib/db';
 import { SearchResult } from '../types/SearchResult';
@@ -23,6 +25,7 @@ const initialState: SearchState = {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [state, setState] = useState<SearchState>(initialState);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{
@@ -30,6 +33,12 @@ export default function Home() {
     lng: number;
     radius: number;
   } | null>(null);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    router.push('/login');
+  }, [router]);
 
   const handleSearch = useCallback(async (query: string, options?: any) => {
     setState(prev => ({
@@ -86,7 +95,7 @@ export default function Home() {
   }, []);
 
   return (
-    <>
+    <AuthGuard>
       <Head>
         <title>Project Echo Ridge Search</title>
         <meta name="description" content="PMF Search Engine - Production Ready" />
@@ -95,13 +104,25 @@ export default function Home() {
 
       <main className="min-h-screen bg-white">
         <div className="container mx-auto px-6 py-12">
-          <nav className="flex justify-end mb-8">
-            <Link 
+          <nav className="flex justify-end space-x-6 mb-8">
+            <Link
+              href="/database"
+              className="text-gray-600 hover:text-black font-medium"
+            >
+              Database
+            </Link>
+            <Link
               href="/about"
               className="text-gray-600 hover:text-black font-medium"
             >
               About
             </Link>
+            <button
+              onClick={handleLogout}
+              className="text-gray-600 hover:text-red-600 font-medium"
+            >
+              Logout
+            </button>
           </nav>
 
           <header className="text-center mb-16">
@@ -153,6 +174,6 @@ export default function Home() {
           onClose={closeMap}
         />
       </main>
-    </>
+    </AuthGuard>
   );
 }
