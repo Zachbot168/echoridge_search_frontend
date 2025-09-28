@@ -31,7 +31,7 @@ export default function Home() {
     radius: number;
   } | null>(null);
 
-  const handleSearch = useCallback(async (query: string) => {
+  const handleSearch = useCallback(async (query: string, options?: any) => {
     setState(prev => ({
       ...prev,
       isLoading: true,
@@ -40,7 +40,7 @@ export default function Home() {
     }));
 
     try {
-      const results = await searchPMF(query);
+      const results = await searchPMF(query, selectedLocation || undefined);
       setState(prev => ({
         ...prev,
         results,
@@ -111,9 +111,11 @@ export default function Home() {
           </header>
 
           <div className="max-w-5xl mx-auto">
-            <SearchBar 
-              onSearch={handleSearch} 
-              isLoading={state.isLoading} 
+            <SearchBar
+              onSearch={handleSearch}
+              isLoading={state.isLoading}
+              selectedLocation={selectedLocation}
+              onClearLocation={() => setSelectedLocation(null)}
             />
             
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8">

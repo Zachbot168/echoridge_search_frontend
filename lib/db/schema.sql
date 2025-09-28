@@ -252,3 +252,104 @@ CREATE TRIGGER IF NOT EXISTS aliases_fts_delete AFTER DELETE ON company_aliases
 BEGIN
     DELETE FROM aliases_fts WHERE alias_id = old.alias_id;
 END;
+
+-- ======================================================================
+-- PIPELINE MANAGEMENT EXTENSION
+-- ======================================================================
+-- Additional tables for pipeline execution and business data storage
+
+-- USERS TABLE (Private - Admin authentication)
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT DEFAULT 'admin',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- LOCATIONS TABLE (Public - Geofencing coordinates)
+CREATE TABLE IF NOT EXISTS locations (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    name TEXT NOT NULL,
+    aliases TEXT, -- JSON array: ["nyc", "new york", "manhattan"]
+    bbox_coordinates TEXT, -- JSON: {"min_lat": 40.4774, "min_lon": -74.2591, "max_lat": 40.9176, "max_lon": -73.7004}
+    center_lat REAL,
+    center_lon REAL,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- PIPELINE_RUNS TABLE (Public - Query execution logs)
+CREATE TABLE IF NOT EXISTS pipeline_runs (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    query TEXT NOT NULL,
+    location_id TEXT REFERENCES locations(id),
+    execution_id TEXT UNIQUE, -- From pipeline API
+    status TEXT DEFAULT 'pending', -- 'running', 'completed', 'failed'
+    started_at TEXT DEFAULT (datetime('now')),
+    completed_at TEXT,
+    results_path TEXT,
+    total_businesses INTEGER DEFAULT 0,
+    metadata TEXT -- JSON
+);
+
+-- BUSINESSES TABLE (Public - Individual business data from runs)
+CREATE TABLE IF NOT EXISTS businesses (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    entity_id TEXT NOT NULL, -- From PMF backend
+    pipeline_run_id TEXT REFERENCES pipeline_runs(id),
+    name TEXT NOT NULL,
+    category TEXT,
+    website TEXT,
+    phone TEXT,
+    address TEXT, -- JSON
+    lat REAL,
+    lon REAL,
+    google_data TEXT, -- JSON: ratings, hours, etc.
+    scores TEXT, -- JSON: DIMB scores
+    web_snapshot TEXT,
+    overall_score REAL,
+    overall_note TEXT,
+    scored_at TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- INDEXES for pipeline management
+CREATE INDEX IF NOT EXISTS idx_businesses_pipeline_run ON businesses(pipeline_run_id);
+CREATE INDEX IF NOT EXISTS idx_businesses_entity_id ON businesses(entity_id);
+CREATE INDEX IF NOT EXISTS idx_locations_name ON locations(name);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_status ON pipeline_runs(status);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_execution_id ON pipeline_runs(execution_id);
+CREATE INDEX IF NOT EXISTS idx_businesses_score ON businesses(overall_score DESC);
+CREATE INDEX IF NOT EXISTS idx_businesses_category ON businesses(category);
+
+-- FTS for business search
+CREATE VIRTUAL TABLE IF NOT EXISTS businesses_fts USING fts5(
+    id UNINDEXED,
+    entity_id UNINDEXED,
+    name,
+    category,
+    website,
+    content=businesses
+);
+
+-- Triggers to maintain business FTS
+CREATE TRIGGER IF NOT EXISTS businesses_fts_insert AFTER INSERT ON businesses
+BEGIN
+    INSERT INTO businesses_fts(id, entity_id, name, category, website)
+    VALUES (new.id, new.entity_id, new.name, new.category, new.website);
+END;
+
+CREATE TRIGGER IF NOT EXISTS businesses_fts_update AFTER UPDATE ON businesses
+BEGIN
+    UPDATE businesses_fts
+    SET name = new.name, category = new.category, website = new.website
+    WHERE id = new.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS businesses_fts_delete AFTER DELETE ON businesses
+BEGIN
+    DELETE FROM businesses_fts WHERE id = old.id;
+END;

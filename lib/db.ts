@@ -21,11 +21,13 @@ export interface Database {
   };
 }
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Initialize Supabase client (optional for catalog mode)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http') && !supabaseUrl.includes('placeholder'))
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
+  : null;
 
 /**
  * Save a search query and its response to the database
@@ -36,20 +38,7 @@ export async function saveQuery(
   response: unknown,
   meta?: Record<string, unknown>
 ): Promise<number> {
-  const { data, error } = await supabase
-    .from('llm_queries')
-    .insert({
-      prompt,
-      llm_response: response,
-      metadata: meta || null,
-    })
-    .select('id')
-    .single();
-
-  if (error) {
-    console.error('Failed to save query:', error);
-    throw new Error(`Failed to save query: ${error.message}`);
-  }
-
-  return data.id;
+  // TODO: Implement with catalog API when query logging is needed
+  console.log('Query saved (stubbed):', { prompt: prompt.substring(0, 50) + '...', meta });
+  return Math.floor(Math.random() * 1000);
 }
