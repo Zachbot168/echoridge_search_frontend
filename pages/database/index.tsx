@@ -235,6 +235,8 @@ function DashboardTab() {
 function BusinessLogsTab() {
   const [businesses, setBusinesses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'created_at' | 'overall_score'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     const fetchBusinesses = async () => {
@@ -260,6 +262,17 @@ function BusinessLogsTab() {
     fetchBusinesses();
   }, []);
 
+  const sortedBusinesses = [...businesses].sort((a, b) => {
+    let aValue = sortBy === 'created_at' ? new Date(a.created_at).getTime() : (a.overall_score || 0);
+    let bValue = sortBy === 'created_at' ? new Date(b.created_at).getTime() : (b.overall_score || 0);
+
+    if (sortOrder === 'asc') {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
+
   if (loading) {
     return <div className="text-center py-8">Loading business data...</div>;
   }
@@ -267,14 +280,32 @@ function BusinessLogsTab() {
   return (
     <div className="bg-white rounded-lg shadow border">
       <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold">Business Logs ({businesses.length} businesses)</h3>
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Business Logs ({businesses.length} businesses)</h3>
+          <div className="flex gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'created_at' | 'overall_score')}
+              className="border border-gray-300 rounded-md px-3 py-1 text-sm"
+            >
+              <option value="created_at">Sort by Date</option>
+              <option value="overall_score">Sort by Score</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className="border border-gray-300 rounded-md px-3 py-1 text-sm hover:bg-gray-50"
+            >
+              {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
+            </button>
+          </div>
+        </div>
       </div>
       <div className="p-6">
         {businesses.length === 0 ? (
           <p className="text-gray-500 text-center py-8">No businesses found</p>
         ) : (
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {businesses.slice(0, 50).map((business) => (
+            {sortedBusinesses.slice(0, 50).map((business) => (
               <div key={business.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-semibold text-lg">{business.name}</h4>
