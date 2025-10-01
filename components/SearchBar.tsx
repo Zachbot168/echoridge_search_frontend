@@ -21,7 +21,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [maxResults, setMaxResults] = useState(25);
+  const [maxResults, setMaxResults] = useState(5);
   const [provider, setProvider] = useState('google');
   const [useStructured, setUseStructured] = useState(false);
 

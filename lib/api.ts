@@ -33,7 +33,7 @@ const MOCK_RESULTS: SearchResult[] = [
   }
 ];
 
-export async function searchPMF(query: string, geofence?: { lat: number; lng: number; radius: number }): Promise<SearchResult[]> {
+export async function searchPMF(query: string, geofence?: { lat: number; lng: number; radius: number }, maxResults: number = 5): Promise<SearchResult[]> {
   // Return empty results for empty queries
   if (!query.trim()) {
     return [];
@@ -79,7 +79,7 @@ export async function searchPMF(query: string, geofence?: { lat: number; lng: nu
     // Prepare request payload
     const requestPayload: any = {
       query: query,
-      max_results: 25,
+      max_results: maxResults,
       provider: 'google'
     };
 

@@ -49,7 +49,9 @@ export default function Home() {
     }));
 
     try {
-      const results = await searchPMF(query, selectedLocation || undefined);
+      const maxResults = options?.maxResults || 5;
+      // Don't send geofence - let backend decide location from query
+      const results = await searchPMF(query, undefined, maxResults);
       setState(prev => ({
         ...prev,
         results,
